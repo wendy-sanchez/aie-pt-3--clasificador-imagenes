@@ -1,3 +1,18 @@
 __pycache__
 .env
 .learn
+
+# Dataset - original images
+data/raw/
+
+# Dataset - processed images
+data/processed/
+
+# Dataset - intermediate files
+data/interim/
+
+# Downloaded datasets
+*.zip
+
+# Trained models
+models/
