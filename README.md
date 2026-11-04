@@ -1,112 +1,290 @@
-# Data Science Project Boilerplate
+# Dog vs. Cat Image Classification
 
-This boilerplate is designed to kickstart data science projects by providing a basic setup for database connections, data processing, and machine learning model development. It includes a structured folder organization for your datasets and a set of pre-defined Python packages necessary for most data science tasks.
+**An image classification project using Deep Learning and EfficientNetB0 to distinguish between cats and dogs.**
 
-## Structure
+[English](README.md) | [Español](README.es.md)
 
-The project is organized as follows:
+---
 
-- **`src/app.py`** → Main Python script where your project will run.
-- **`src/explore.ipynb`** → Notebook for exploration and testing. Once exploration is complete, migrate the clean code to `app.py`.
-- **`src/utils.py`** → Auxiliary functions, such as database connection.
-- **`requirements.txt`** → List of required Python packages.
-- **`models/`** → Will contain your SQLAlchemy model classes.
-- **`data/`** → Stores datasets at different stages:
-  - **`data/raw/`** → Raw data.
-  - **`data/interim/`** → Temporarily transformed data.
-  - **`data/processed/`** → Data ready for analysis.
+## Overview
 
+This project implements a binary image classification system capable of identifying whether an image contains a cat or a dog.
 
-## ⚡ Initial Setup in Codespaces (Recommended)
+The model is built using **EfficientNetB0**, a convolutional neural network architecture, with TensorFlow and Keras. The system is trained on the Dogs vs. Cats dataset and evaluated using a separate test directory.
 
-No manual setup is required, as **Codespaces is automatically configured** with the predefined files created by the academy for you. Just follow these steps:
+The project was developed as part of a Machine Learning and Deep Learning training exercise.
 
-1. **Wait for the environment to configure automatically**.
-   - All necessary packages and the database will install themselves.
-   - The automatically created `username` and `db_name` are in the **`.env`** file at the root of the project.
-2. **Once Codespaces is ready, you can start working immediately**.
+## Objectives
 
+- Explore and visualize image datasets.
+- Prepare and organize images for model training.
+- Implement a convolutional neural network using EfficientNetB0.
+- Train and optimize the model using callbacks.
+- Evaluate classification performance using Scikit-learn.
+- Generate predictions for individual images.
 
-## 💻 Local Setup (Only if you can't use Codespaces)
+## Dataset
 
-**Prerequisites**
+The project uses the Dogs vs. Cats dataset, originally associated with the Asirra CAPTCHA challenge.
 
-Make sure you have Python 3.11+ installed on your machine. You will also need pip to install the Python packages.
+**Dataset source:** [Dogs vs. Cats Dataset](https://storage.googleapis.com/datascience-materials/dogs-vs-cats.zip)
 
-**Installation**
+The dataset contains 25,000 labeled images:
 
-Clone the project repository to your local machine.
+- 12,500 cat images.
+- 12,500 dog images.
 
-Navigate to the project directory and install the required Python packages:
+The images are organized into training and testing directories, with separate subdirectories for each class.
+
+| Dataset | Images |
+|---|---:|
+| Training | 20,000 |
+| Testing | 5,000 |
+| **Total** | **25,000** |
+
+## Technologies and Libraries
+
+- Python
+- TensorFlow
+- Keras 3
+- EfficientNetB0
+- NumPy
+- Matplotlib
+- Scikit-learn
+
+## Model Architecture
+
+The classification model uses the following architecture:
+
+1. EfficientNetB0 (without its original classification head).
+2. GlobalAveragePooling2D.
+3. Dense layer with 128 neurons and ReLU activation.
+4. Dense output layer with 2 neurons and Softmax activation.
+
+**Input image dimensions:** 224 × 224 × 3.
+
+**Total parameters:** 4,213,797.
+
+The model is compiled using the Adam optimizer and categorical cross-entropy loss, with accuracy as its evaluation metric.
+
+## Data Processing
+
+Since the available environment has less than 12 GB of RAM, images are loaded progressively using Keras `ImageDataGenerator` and `flow_from_directory()`.
+
+This approach avoids loading the entire dataset into memory.
+
+The dataset is divided into:
+
+- `train/`: training images.
+- `test/`: testing images.
+
+Each directory contains two class folders: `cats/` and `dogs/`.
+
+Images are resized to 224 × 224 pixels when loaded by the generators.
+
+## Training and Optimization
+
+The model is trained using the following configuration:
+
+- Batch size: 8.
+- Epochs: 10.
+- Optimizer: Adam.
+- Loss function: Categorical Crossentropy.
+- Evaluation metric: Accuracy.
+
+Two callbacks are implemented:
+
+- **ModelCheckpoint:** saves the model with the best validation accuracy.
+- **EarlyStopping:** stops training when validation loss stops improving and restores the weights from the best epoch.
+
+The best model is saved as:
+
+`models/best_model.keras`
+
+## Model Evaluation
+
+The model is evaluated using:
+
+- Accuracy.
+- Loss.
+- Confusion Matrix.
+- Precision.
+- Recall.
+- F1-score.
+
+Scikit-learn is used to calculate the classification metrics.
+
+### Results
+
+| Metric | Result |
+|---|---:|
+| Test Accuracy | 91.32% |
+| Test Loss | 0.2307 |
+
+### Classification Report
+
+| Class | Precision | Recall | F1-score |
+|---|---:|---:|---:|
+| Cats | 0.95 | 0.87 | 0.91 |
+| Dogs | 0.88 | 0.95 | 0.92 |
+| **Macro Average** | **0.92** | **0.91** | **0.91** |
+
+### Confusion Matrix
+
+| Actual / Predicted | Cats | Dogs |
+|---|---:|---:|
+| Cats | 2,184 | 316 |
+| Dogs | 118 | 2,382 |
+
+The model achieved an overall accuracy of 91.32% on the 5,000 images in the test directory.
+
+**Evaluation note:** The test generator was also used as the validation data during training. Therefore, these results should not be interpreted as a fully independent final evaluation.
+
+## Individual Image Predictions
+
+The project includes a prediction script that loads the trained model and classifies individual images.
+
+It returns:
+
+- Predicted class (cats or dogs).
+- Prediction confidence.
+
+Example:
+
+```text
+Predicted class: cats
+Confidence: 98.88%
+```
+
+## Project Structure
+
+```text
+aie-pt-3--clasificador-imagenes/
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│       ├── train/
+│       │   ├── cats/
+│       │   └── dogs/
+│       └── test/
+│           ├── cats/
+│           └── dogs/
+│
+├── models/
+│   └── best_model.keras
+│
+├── src/
+│   ├── explore.ipynb
+│   ├── prepare_dataset.py
+│   ├── data_loader.py
+│   ├── model.py
+│   ├── train.py
+│   ├── evaluate.py
+│   └── predict.py
+│
+├── .gitignore
+└── requirements.txt
+```
+
+## Installation and Usage
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/wendy-sanchez/aie-pt-3--clasificador-imagenes.git
+
+cd aie-pt-3--clasificador-imagenes
+```
+
+### 2. Create and activate a virtual environment
+
+```bash
+python -m venv .venv
+```
+
+Activate it:
+
+**Linux / macOS:**
+
+```bash
+source .venv/bin/activate
+```
+
+**Windows:**
+
+```bash
+.venv\Scripts\activate
+```
+
+### 3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-**Create a database (if necessary)**
+### 4. Download and prepare the dataset
 
-Create a new database within the Postgres engine by customizing and executing the following command:
+Download the dataset from the source link and extract it into:
+
+```text
+data/raw/dogs-vs-cats/train/
+```
+
+Run the dataset preparation script:
 
 ```bash
-$ psql -U postgres -c "DO \$\$ BEGIN 
-    CREATE USER my_user WITH PASSWORD 'my_password'; 
-    CREATE DATABASE my_database OWNER my_user; 
-END \$\$;"
+python src/prepare_dataset.py
 ```
-Connect to the Postgres engine to use your database, manipulate tables, and data:
+
+This creates the training and testing directories.
+
+### 5. Explore the dataset
+
+Open the notebook:
+
+```text
+src/explore.ipynb
+```
+
+### 6. Train the model
 
 ```bash
-$ psql -U my_user -d my_database
+python src/train.py
 ```
 
-Once inside PSQL, you can create tables, run queries, insert, update, or delete data, and much more!
+The best model will be saved in:
 
-**Environment Variables**
-
-Create a .env file in the root directory of the project to store your environment variables, such as your database connection string:
-
-```makefile
-DATABASE_URL="postgresql://<USER>:<PASSWORD>@<HOST>:<PORT>/<DB_NAME>"
-
-#example
-DATABASE_URL="postgresql://my_user:my_password@localhost:5432/my_database"
+```text
+models/best_model.keras
 ```
 
-## Running the Application
-
-To run the application, execute the app.py script from the root directory of the project:
+### 7. Evaluate the model
 
 ```bash
-python src/app.py
+python src/evaluate.py
 ```
 
-## Adding Models
+### 8. Predict an individual image
 
-To add SQLAlchemy model classes, create new Python script files within the models/ directory. These classes should be defined according to your database schema.
-
-Example model definition (`models/example_model.py`):
-
-```py
-from sqlalchemy.orm import declarative_base
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column
-
-Base = declarative_base()
-
-class ExampleModel(Base):
-    __tablename__ = 'example_table'
-    id: Mapped[int] = mapped_column(primary_key=True)
-    username: Mapped[str] = mapped_column(unique=True)
+```bash
+python src/predict.py
 ```
 
-## Working with Data
+When prompted, enter the image path, for example:
 
-You can place your raw datasets in the data/raw directory, intermediate datasets in data/interim, and processed datasets ready for analysis in data/processed.
+```text
+data/raw/dogs-vs-cats/train/cat.10.jpg
+```
 
-To process data, you can modify the app.py script to include your data processing steps, using pandas for data manipulation and analysis.
+## Notes
 
-## Contributors
+- The dataset and trained model are excluded from Git tracking through `.gitignore`.
+- Download and prepare the dataset before running the training, evaluation, or prediction scripts.
+- The project uses 224 × 224 pixel images to match the specified EfficientNetB0 input shape.
+- Training performance depends on available hardware. CPU-based training may take considerably longer than GPU-based training.
 
-This template was built as part of the [Data Science and Machine Learning Bootcamp](https://4geeksacademy.com/us/coding-bootcamps/datascience-machine-learning) by 4Geeks Academy by [Alejandro Sanchez](https://twitter.com/alesanchezr) and many other contributors. Learn more about [4Geeks Academy BootCamp programs](https://4geeksacademy.com/us/programs) here.
+---
 
-Other templates and resources like this can be found on the school's GitHub page.
+**Developed by Wendy Sanchez**  
+**Machine Learning & Deep Learning Project**
