@@ -34,12 +34,13 @@ The dataset contains 25,000 labeled images:
 - 12,500 cat images.
 - 12,500 dog images.
 
-The images are organized into training and testing directories, with separate subdirectories for each class.
+The images are organized into training, validation, and testing directories, with separate subdirectories for each class.
 
 | Dataset | Images |
 |---|---:|
 | Training | 20,000 |
-| Testing | 5,000 |
+| Validation | 2,500 |
+| Testing | 2,500 |
 | **Total** | **25,000** |
 
 ## Technologies and Libraries
@@ -75,8 +76,9 @@ This approach avoids loading the entire dataset into memory.
 
 The dataset is divided into:
 
-- `train/`: training images.
-- `test/`: testing images.
+- `train/`: images used to update model weights.
+- `validation/`: images used for early stopping and model checkpoint selection.
+- `test/`: images reserved for final evaluation only.
 
 Each directory contains two class folders: `cats/` and `dogs/`.
 
@@ -116,29 +118,7 @@ Scikit-learn is used to calculate the classification metrics.
 
 ### Results
 
-| Metric | Result |
-|---|---:|
-| Test Accuracy | 91.32% |
-| Test Loss | 0.2307 |
-
-### Classification Report
-
-| Class | Precision | Recall | F1-score |
-|---|---:|---:|---:|
-| Cats | 0.95 | 0.87 | 0.91 |
-| Dogs | 0.88 | 0.95 | 0.92 |
-| **Macro Average** | **0.92** | **0.91** | **0.91** |
-
-### Confusion Matrix
-
-| Actual / Predicted | Cats | Dogs |
-|---|---:|---:|
-| Cats | 2,184 | 316 |
-| Dogs | 118 | 2,382 |
-
-The model achieved an overall accuracy of 91.32% on the 5,000 images in the test directory.
-
-**Evaluation note:** The test generator was also used as the validation data during training. Therefore, these results should not be interpreted as a fully independent final evaluation.
+The previously reported 91.32% accuracy was measured on images that were also used for validation and model selection. It is not an independent test result and is not reported here as one. Run training and then `src/evaluate.py` to obtain metrics on the reserved test split.
 
 ## Individual Image Predictions
 
@@ -163,8 +143,11 @@ aie-pt-3--clasificador-imagenes/
 │
 ├── data/
 │   ├── raw/
-│   └── processed/
+│   ├── processed_split/
 │       ├── train/
+│       │   ├── cats/
+│       │   └── dogs/
+│       ├── validation/
 │       │   ├── cats/
 │       │   └── dogs/
 │       └── test/
@@ -237,7 +220,7 @@ Run the dataset preparation script:
 python src/prepare_dataset.py
 ```
 
-This creates the training and testing directories.
+This creates separate training, validation, and testing directories under `data/processed_split/`. The existing `data/processed/` directory, if present, is left untouched.
 
 ### 5. Explore the dataset
 

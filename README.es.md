@@ -34,12 +34,13 @@ El conjunto de datos contiene 25.000 imágenes etiquetadas:
 - 12.500 imágenes de gatos.
 - 12.500 imágenes de perros.
 
-Las imágenes se organizan en directorios de entrenamiento y prueba, con subdirectorios independientes para cada clase.
+Las imágenes se organizan en directorios de entrenamiento, validación y prueba, con subdirectorios independientes para cada clase.
 
 | Conjunto | Imágenes |
 |---|---:|
 | Entrenamiento | 20.000 |
-| Prueba | 5.000 |
+| Validación | 2.500 |
+| Prueba | 2.500 |
 | **Total** | **25.000** |
 
 ## Tecnologías y librerías
@@ -75,8 +76,9 @@ Este procedimiento evita cargar todo el conjunto de datos simultáneamente en me
 
 El dataset se divide en:
 
-- `train/`: imágenes de entrenamiento.
-- `test/`: imágenes de prueba.
+- `train/`: imágenes utilizadas para actualizar los pesos del modelo.
+- `validation/`: imágenes utilizadas para decidir la parada temprana y seleccionar el mejor modelo.
+- `test/`: imágenes reservadas exclusivamente para la evaluación final.
 
 Cada directorio contiene dos subcarpetas correspondientes a las clases: `cats/` y `dogs/`.
 
@@ -116,29 +118,7 @@ Se utiliza Scikit-learn para calcular las métricas de clasificación.
 
 ### Resultados
 
-| Métrica | Resultado |
-|---|---:|
-| Test Accuracy | 91,32 % |
-| Test Loss | 0,2307 |
-
-### Informe de clasificación
-
-| Clase | Precision | Recall | F1-score |
-|---|---:|---:|---:|
-| Gatos | 0,95 | 0,87 | 0,91 |
-| Perros | 0,88 | 0,95 | 0,92 |
-| **Promedio macro** | **0,92** | **0,91** | **0,91** |
-
-### Matriz de confusión
-
-| Real / Predicción | Gatos | Perros |
-|---|---:|---:|
-| Gatos | 2.184 | 316 |
-| Perros | 118 | 2.382 |
-
-El modelo alcanzó una accuracy global del 91,32 % sobre las 5.000 imágenes del directorio de prueba.
-
-**Nota sobre la evaluación:** el generador de prueba también se utilizó como conjunto de validación durante el entrenamiento. Por lo tanto, estos resultados no deben interpretarse como una evaluación final completamente independiente.
+La accuracy del 91,32 % reportada anteriormente se midió sobre imágenes que también se utilizaron para validación y selección del modelo. No es un resultado de prueba independiente y no se presenta como tal. Ejecuta el entrenamiento y luego `src/evaluate.py` para obtener las métricas del conjunto de prueba reservado.
 
 ## Predicciones de imágenes individuales
 
@@ -163,8 +143,11 @@ aie-pt-3--clasificador-imagenes/
 │
 ├── data/
 │   ├── raw/
-│   └── processed/
+│   ├── processed_split/
 │       ├── train/
+│       │   ├── cats/
+│       │   └── dogs/
+│       ├── validation/
 │       │   ├── cats/
 │       │   └── dogs/
 │       └── test/
@@ -237,7 +220,7 @@ Ejecutar el script de preparación:
 python src/prepare_dataset.py
 ```
 
-Esto creará los directorios de entrenamiento y prueba.
+Esto creará directorios separados de entrenamiento, validación y prueba en `data/processed_split/`. Si existe `data/processed/`, el script lo dejará intacto.
 
 ### 5. Explorar el conjunto de datos
 

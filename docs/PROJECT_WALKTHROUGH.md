@@ -107,10 +107,11 @@ The following script was created to prepare the dataset:
 src/prepare_dataset.py
 ```
 
-The objective was to divide the images into two datasets:
+The objective is to divide the images into three datasets:
 
 - **Training set:** 80% of the images.
-- **Test set:** 20% of the images.
+- **Validation set:** 10% of the images.
+- **Test set:** 10% of the images.
 
 The split was performed separately for each category, maintaining the same proportion of cat and dog images.
 
@@ -120,18 +121,21 @@ A random seed (`random.seed(42)`) was used to make the image selection reproduci
 
 The preparation process produced the following distribution:
 
-| Category | Training | Test | Total |
-|---|---:|---:|---:|
-| Cats | 10,000 | 2,500 | 12,500 |
-| Dogs | 10,000 | 2,500 | 12,500 |
-| **Total** | **20,000** | **5,000** | **25,000** |
+| Category | Training | Validation | Test | Total |
+|---|---:|---:|---:|---:|
+| Cats | 10,000 | 1,250 | 1,250 | 12,500 |
+| Dogs | 10,000 | 1,250 | 1,250 | 12,500 |
+| **Total** | **20,000** | **2,500** | **2,500** | **25,000** |
 
 The final directory structure was organized as follows:
 
 ```text
 data/
-└── processed/
+└── processed_split/
     ├── train/
+    │   ├── cats/
+    │   └── dogs/
+    ├── validation/
     │   ├── cats/
     │   └── dogs/
     └── test/
@@ -147,7 +151,7 @@ This solution made it possible to separate the images into training and test dir
 
 ### 3.5. Result
 
-The dataset preparation was completed successfully, with 20,000 images allocated to training and 5,000 images allocated to testing.
+The preparation script creates the three splits under `data/processed_split/`. Existing files under the earlier `data/processed/` path are preserved.
 
 ## 4. Image Exploration and Visualization
 
@@ -218,8 +222,10 @@ The following parameters were defined:
 IMAGE_SIZE = (224, 224)
 BATCH_SIZE = 8
 
-train_dir = "data/processed/train"
-test_dir = "data/processed/test"
+dataset_dir = "data/processed_split"
+train_dir = f"{dataset_dir}/train"
+validation_dir = f"{dataset_dir}/validation"
+test_dir = f"{dataset_dir}/test"
 ```
 
 Images were resized to 224 × 224 pixels to match the input dimensions specified later in the EfficientNetB0 architecture.
@@ -231,7 +237,8 @@ The batch size was set to 8 images to reduce memory consumption during processin
 Two independent generators were created:
 
 - `trdata`: loads the training images.
-- `tsdata`: loads the test images.
+- `valdata`: loads the validation images.
+- `tsdata`: loads the test images, reserved for final evaluation.
 
 Both use `ImageDataGenerator()` without additional transformations.
 
@@ -245,11 +252,12 @@ The following settings were applied:
 
 The generators use `flow_from_directory()` to automatically locate images and assign their corresponding labels based on the directory structure.
 
-The output confirmed that the images were loaded correctly:
+The output confirms the expected split sizes:
 
 ```text
 Found 20000 images belonging to 2 classes.
-Found 5000 images belonging to 2 classes.
+Found 2500 images belonging to 2 classes.
+Found 2500 images belonging to 2 classes.
 ```
 
 ### 5.5. Preprocessing Considerations
@@ -263,11 +271,12 @@ This configuration was maintained to remain compatible with the selected archite
 Data loading was completed successfully:
 
 - 20,000 images available for training.
-- 5,000 images available for evaluation.
+- 2,500 images available for validation.
+- 2,500 images reserved for final evaluation.
 - Images resized to 224 × 224 pixels.
 - Batch processing using 8 images per batch.
 
-The `trdata` and `tsdata` generators were ready to supply data to the model during the following stages.
+The `trdata`, `valdata`, and `tsdata` generators were ready for training, model selection, and final evaluation, respectively.
 
 ## 6. EfficientNetB0 Model Architecture
 
@@ -349,7 +358,7 @@ The following file was created to train the neural network:
 src/train.py
 ```
 
-The data generators (`trdata` and `tsdata`), the previously defined model, and two Keras callbacks were imported:
+The data generators (`trdata` and `valdata`), the previously defined model, and two Keras callbacks were imported:
 
 - `ModelCheckpoint`
 - `EarlyStopping`
@@ -388,7 +397,7 @@ At the end of training, the callback restored the weights corresponding to the e
 The model was trained using `model.fit()` with the following parameters:
 
 - Training generator: `trdata`.
-- Validation data: `tsdata`.
+- Validation data: `valdata`.
 - Maximum number of epochs: 10.
 - Batch size: 8 images.
 - Callbacks: `ModelCheckpoint` and `EarlyStopping`.
@@ -405,7 +414,7 @@ Additionally, the environment did not provide a CUDA-compatible GPU, so training
 
 ### 7.6. Training Results
 
-The model was trained for 10 epochs. The results were:
+The following table is retained from the earlier training run, which incorrectly used the old test split as validation. These are historical figures and do not describe the corrected split:
 
 | Epoch | Accuracy | Loss | Val. Accuracy | Val. Loss |
 |---:|---:|---:|---:|---:|
@@ -422,21 +431,13 @@ The model was trained for 10 epochs. The results were:
 
 ### 7.7. Best Model Selection
 
-The `ModelCheckpoint` callback, which monitored `val_accuracy`, saved the model corresponding to epoch 9, which achieved the highest validation accuracy: **91.32%**.
+In the earlier run, `ModelCheckpoint` saved epoch 9 at 91.32% validation accuracy. That validation data was also the old test set, so this score is not an independent test result and does not apply to a new run with the corrected split.
 
-On the other hand, `EarlyStopping` monitored `val_loss` and restored the weights from epoch 8, which achieved the lowest validation loss: 0.2306.
-
-It is important to distinguish between these two results: the `models/best_model.keras` file contains the model saved by `ModelCheckpoint`, corresponding to epoch 9.
+In that earlier run, `EarlyStopping` monitored `val_loss` and restored the weights from epoch 8, which had the lowest validation loss: 0.2306. The existing `models/best_model.keras` is also from the old run; rerun training with the corrected split before evaluating it.
 
 ### 7.8. Validation Data Considerations
 
-During training, `tsdata` was used as the validation dataset through the `validation_data` parameter.
-
-The same dataset was subsequently used for the final model evaluation.
-
-Therefore, although an accuracy of 91.32% was achieved, the evaluation dataset does not constitute an independent test set because its results were also used to monitor training.
-
-This limitation should be considered when interpreting the results.
+The corrected pipeline uses `valdata` through the `validation_data` parameter. `tsdata` is not used in training or checkpoint selection and is reserved for the final evaluation. The previously reported 91.32% came from the old, reused test split and must not be interpreted as an independent test score. New test metrics require retraining with the three-way split.
 
 ### 7.9. Result
 
@@ -446,7 +447,7 @@ Training was completed successfully, generating the following file:
 models/best_model.keras
 ```
 
-This file contains the model selected by `ModelCheckpoint` and is used in the subsequent evaluation and individual prediction stages.
+The new training run writes the model selected by `ModelCheckpoint` to this path. The file already present in the repository workspace is from the earlier run and must be replaced before final evaluation.
 
 ## 8. Model Evaluation
 
@@ -454,7 +455,7 @@ This file contains the model selected by `ModelCheckpoint` and is used in the su
 
 Once training was completed, the model was evaluated to measure its classification performance and determine how accurately it identified cat and dog images.
 
-For this purpose, the model saved through `ModelCheckpoint` and the `tsdata` generator were used.
+For this purpose, the model saved through `ModelCheckpoint` and the `tsdata` generator are used.
 
 ### 8.2. Implementation
 
@@ -476,61 +477,11 @@ The following tools were used in this script:
 
 ### 8.3. General Metrics
 
-The results obtained were:
+The previous run reported 91.32% accuracy, but it evaluated the same images used for validation and model selection. That result is not an independent test measurement and has been removed from the current results. Run `src/train.py` and then `src/evaluate.py` to generate metrics for the reserved 2,500-image test split.
 
-| Metric | Result |
-|---|---:|
-| Test Loss | 0.2307 |
-| Test Accuracy | 91.32% |
-| Accuracy Score | 91.32% |
+### 8.4. Result
 
-The model correctly classified 4,566 out of the 5,000 evaluated images.
-
-### 8.4. Confusion Matrix
-
-The resulting confusion matrix was:
-
-| Actual Category | Predicted: Cats | Predicted: Dogs |
-|---|---:|---:|
-| Cats | 2,184 | 316 |
-| Dogs | 118 | 2,382 |
-
-Interpretation:
-
-- **2,184 cats** were correctly classified.
-- **316 cats** were incorrectly classified as dogs.
-- **2,382 dogs** were correctly classified.
-- **118 dogs** were incorrectly classified as cats.
-
-In total, the model made 4,566 correct predictions and 434 incorrect predictions.
-
-### 8.5. Classification Report
-
-The metrics obtained for each category were:
-
-| Category | Precision | Recall | F1-score | Support |
-|---|---:|---:|---:|---:|
-| Cats | 0.95 | 0.87 | 0.91 | 2,500 |
-| Dogs | 0.88 | 0.95 | 0.92 | 2,500 |
-| **Macro avg** | **0.92** | **0.91** | **0.91** | **5,000** |
-| **Weighted avg** | **0.92** | **0.91** | **0.91** | **5,000** |
-
-### 8.6. Results Interpretation
-
-The results show that the model achieved an overall accuracy of 91.32%.
-
-The following observations can be made:
-
-- The `cats` category achieved 95% precision and 87% recall.
-- The `dogs` category achieved 88% precision and 95% recall.
-
-This indicates that the model correctly identified a higher proportion of dogs than cats, although it produced more false positives when classifying cats as dogs.
-
-### 8.7. Result
-
-The evaluation confirmed that the model can distinguish between both categories, achieving an overall accuracy of 91.32% on the dataset used.
-
-**Note:** These results should be interpreted considering that the test dataset was also used as the validation dataset during training, as explained in the previous section.
+The evaluation script reports loss, accuracy, a confusion matrix, and a classification report for `tsdata` only. No independent result is available until the model is retrained with the corrected split.
 
 ## 9. Individual Predictions
 
@@ -670,7 +621,7 @@ A binary image classifier capable of distinguishing between cats and dogs was su
 The following tasks were completed:
 
 - Downloading and organizing a dataset containing 25,000 images.
-- Splitting the data into training and test sets.
+- Splitting the data into training, validation, and test sets.
 - Exploring and visualizing images.
 - Implementing data generators using `ImageDataGenerator`.
 - Building and compiling an EfficientNetB0-based neural network.
@@ -685,28 +636,27 @@ The following tasks were completed:
 |---|---:|
 | Original images | 25,000 |
 | Training images | 20,000 |
-| Test images | 5,000 |
+| Validation images | 2,500 |
+| Test images | 2,500 |
 | Architecture | EfficientNetB0 |
-| Epochs completed | 10 |
-| Best validation accuracy | 91.32% |
-| Reported test accuracy | 91.32% |
+| New validation accuracy | Pending retraining |
+| Independent test accuracy | Pending retraining |
 | Saved model | `best_model.keras` |
 
 ### 11.3. Limitations and Possible Improvements
 
 Although the project was completed successfully, there are several opportunities for improvement:
 
-1. **Independent test set:** reserve an independent validation set for monitoring training and keep the test set exclusively for final evaluation.
-2. **Pretrained weights:** experiment with EfficientNetB0 using ImageNet pretrained weights through transfer learning.
-3. **Data augmentation:** incorporate data augmentation techniques to improve the model's generalization ability.
-4. **Training optimization:** experiment with different batch sizes, optimizers, and learning rates.
-5. **Results visualization:** incorporate training and validation accuracy/loss plots, as well as a visualization of the confusion matrix.
+1. **Pretrained weights:** experiment with EfficientNetB0 using ImageNet pretrained weights through transfer learning.
+2. **Data augmentation:** incorporate data augmentation techniques to improve the model's generalization ability.
+3. **Training optimization:** experiment with different batch sizes, optimizers, and learning rates.
+4. **Results visualization:** incorporate training and validation accuracy/loss plots, as well as a visualization of the confusion matrix.
 
 ### 11.4. Conclusion
 
 This project made it possible to implement a complete image classification workflow using deep learning techniques.
 
-An EfficientNetB0 model was successfully trained and evaluated, achieving a reported accuracy of 91.32%. An additional feature was also implemented to perform predictions on individual images.
+The repository now separates training, validation, and test data. The previously reported 91.32% came from a reused test split and is not an independent result; a new training run is required to report valid test metrics. An additional feature was also implemented to perform predictions on individual images.
 
 The development process provided practical experience with Python, TensorFlow, Keras, image processing, model evaluation, and project management using Git and GitHub.
 

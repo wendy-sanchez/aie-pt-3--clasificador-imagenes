@@ -1,9 +1,13 @@
 
 import os
 
+# Limit TensorFlow CPU threads
+os.environ["TF_NUM_INTRAOP_THREADS"] = "2"
+os.environ["TF_NUM_INTEROP_THREADS"] = "1"
+
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 
-from data_loader import trdata, tsdata
+from data_loader import trdata, valdata
 from model import model
 
 # Create directory to save the best model
@@ -29,7 +33,7 @@ early_stopping = EarlyStopping(
 # Train the model
 history = model.fit(
     trdata,
-    validation_data=tsdata,
+    validation_data=valdata,
     epochs=10,
     callbacks=[checkpoint, early_stopping]
 )
