@@ -10,7 +10,7 @@
 
 This project implements a binary image classification system capable of identifying whether an image contains a cat or a dog.
 
-The model is built using **EfficientNetB0**, a convolutional neural network architecture, with TensorFlow and Keras. The system is trained on the Dogs vs. Cats dataset and evaluated using a separate test directory.
+The model is built using **EfficientNetB0**, a convolutional neural network architecture, with TensorFlow and Keras. The system is trained on the Dogs vs. Cats dataset and evaluated using an independent test dataset.
 
 The project was developed as part of a Machine Learning and Deep Learning training exercise.
 
@@ -34,14 +34,16 @@ The dataset contains 25,000 labeled images:
 - 12,500 cat images.
 - 12,500 dog images.
 
-The images are organized into training, validation, and testing directories, with separate subdirectories for each class.
+The original dataset is divided into three independent subsets using an 80/10/10 split:
 
-| Dataset | Images |
-|---|---:|
-| Training | 20,000 |
-| Validation | 2,500 |
-| Testing | 2,500 |
-| **Total** | **25,000** |
+| Dataset | Images | Percentage |
+| :--- | ---: | ---: |
+| Training | 20,000 | 80% |
+| Validation | 2,500 | 10% |
+| Testing | 2,500 | 10% |
+| **Total** | **25,000** | **100%** |
+
+Each subset contains images from both classes, with an equal distribution of cats and dogs.
 
 ## Technologies and Libraries
 
@@ -70,26 +72,28 @@ The model is compiled using the Adam optimizer and categorical cross-entropy los
 
 ## Data Processing
 
-Since the available environment has less than 12 GB of RAM, images are loaded progressively using Keras `ImageDataGenerator` and `flow_from_directory()`.
+Images are loaded progressively using Keras `ImageDataGenerator` and `flow_from_directory()`.
 
 This approach avoids loading the entire dataset into memory.
 
 The dataset is divided into:
 
 - `train/`: images used to update model weights.
-- `validation/`: images used for early stopping and model checkpoint selection.
-- `test/`: images reserved for final evaluation only.
+- `validation/`: images used for model selection and early stopping.
+- `test/`: images reserved exclusively for final evaluation.
 
 Each directory contains two class folders: `cats/` and `dogs/`.
 
 Images are resized to 224 × 224 pixels when loaded by the generators.
+
+The dataset preparation script creates a reproducible split using a fixed random seed. It uses hard links to avoid duplicating image files.
 
 ## Training and Optimization
 
 The model is trained using the following configuration:
 
 - Batch size: 8.
-- Epochs: 10.
+- Maximum epochs: 10.
 - Optimizer: Adam.
 - Loss function: Categorical Crossentropy.
 - Evaluation metric: Accuracy.
@@ -97,15 +101,19 @@ The model is trained using the following configuration:
 Two callbacks are implemented:
 
 - **ModelCheckpoint:** saves the model with the best validation accuracy.
-- **EarlyStopping:** stops training when validation loss stops improving and restores the weights from the best epoch.
+- **EarlyStopping:** monitors validation loss, stops training when it stops improving, and restores the weights corresponding to the best validation loss.
 
-The best model is saved as:
+The best model according to validation accuracy is saved as:
 
 `models/best_model.keras`
 
+Training completed all 10 epochs. The highest validation accuracy was achieved at epoch 8.
+
 ## Model Evaluation
 
-The model is evaluated using:
+The final evaluation is performed using the independent test subset, which is not used during training, early stopping, or model checkpoint selection.
+
+The following metrics are calculated using Scikit-learn:
 
 - Accuracy.
 - Loss.
@@ -114,27 +122,62 @@ The model is evaluated using:
 - Recall.
 - F1-score.
 
-Scikit-learn is used to calculate the classification metrics.
+### Final Results
 
-### Results
+The model achieved the following results on the 2,500 test images:
 
-The previously reported 91.32% accuracy was measured on images that were also used for validation and model selection. It is not an independent test result and is not reported here as one. Run training and then `src/evaluate.py` to obtain metrics on the reserved test split.
+| Metric | Result |
+| :--- | ---: |
+| Test Accuracy | **88.76%** |
+| Test Loss | 0.2581 |
+| Correct Predictions | 2,219 |
+| Incorrect Predictions | 281 |
+
+The best validation accuracy achieved during training was **91.48%**, at epoch 8.
+
+### Confusion Matrix
+
+The confusion matrix shows the relationship between the actual and predicted classes:
+
+| Actual Class | Predicted Cats | Predicted Dogs |
+| :--- | ---: | ---: |
+| Cats | 1,061 | 189 |
+| Dogs | 92 | 1,158 |
+
+### Classification Report
+
+| Class | Precision | Recall | F1-score | Support |
+| :--- | ---: | ---: | ---: | ---: |
+| Cats | 0.92 | 0.85 | 0.88 | 1,250 |
+| Dogs | 0.86 | 0.93 | 0.89 | 1,250 |
+| **Macro Average** | **0.89** | **0.89** | **0.89** | **2,500** |
+| **Weighted Average** | **0.89** | **0.89** | **0.89** | **2,500** |
+
+The model achieved a balanced F1-score across both classes. It showed higher recall for dogs, while precision was higher for cats.
+
+These results provide an independent measure of the model's generalization performance.
 
 ## Individual Image Predictions
 
-The project includes a prediction script that loads the trained model and classifies individual images.
+The project includes a script to classify individual images using the trained model.
 
-It returns:
+Run:
 
-- Predicted class (cats or dogs).
-- Prediction confidence.
+```bash
+python src/predict.py
+```
 
-Example:
+Enter the path to an image when prompted.
+
+**Example using an image from the test dataset:**
 
 ```text
+Enter the image path: data/processed_split/test/cats/cat.1.jpg
 Predicted class: cats
-Confidence: 98.88%
+Confidence: 99.95%
 ```
+
+The confidence score represents the probability assigned by the model to its predicted class. It does not guarantee that the prediction is correct.
 
 ## Project Structure
 
@@ -143,7 +186,7 @@ aie-pt-3--clasificador-imagenes/
 │
 ├── data/
 │   ├── raw/
-│   ├── processed_split/
+│   └── processed_split/
 │       ├── train/
 │       │   ├── cats/
 │       │   └── dogs/
@@ -236,7 +279,7 @@ src/explore.ipynb
 python src/train.py
 ```
 
-The best model will be saved in:
+The best model according to validation accuracy will be saved in:
 
 ```text
 models/best_model.keras
@@ -247,6 +290,8 @@ models/best_model.keras
 ```bash
 python src/evaluate.py
 ```
+
+This evaluates the saved model using the independent test subset and displays the evaluation metrics, confusion matrix, and classification report.
 
 ### 8. Predict an individual image
 
@@ -266,6 +311,7 @@ data/raw/dogs-vs-cats/train/cat.10.jpg
 - Download and prepare the dataset before running the training, evaluation, or prediction scripts.
 - The project uses 224 × 224 pixel images to match the specified EfficientNetB0 input shape.
 - Training performance depends on available hardware. CPU-based training may take considerably longer than GPU-based training.
+- The test subset must remain independent and should only be used for final model evaluation.
 
 ---
 

@@ -234,7 +234,7 @@ El tamaño del lote se estableció inicialmente en 8 imágenes para reducir el c
 
 ### 5.3. Creación de los generadores
 
-Se crearon dos generadores independientes:
+Se crearon tres generadores independientes:
 
 - `trdata`: encargado de cargar las imágenes de entrenamiento.
 - `valdata`: encargado de cargar las imágenes de validación.
@@ -366,18 +366,22 @@ Se importaron los generadores de datos (`trdata` y `valdata`), el modelo definid
 - `ModelCheckpoint`
 - `EarlyStopping`
 
+El proceso de entrenamiento utiliza el conjunto de entrenamiento para actualizar los pesos del modelo y el conjunto de validación para monitorizar su rendimiento y seleccionar el mejor modelo.
+
+El conjunto de prueba (`tsdata`) no se utiliza durante el entrenamiento ni para seleccionar el modelo. Se reserva exclusivamente para la evaluación final.
+
 ### 7.2. Configuración de ModelCheckpoint
 
 Se utilizó `ModelCheckpoint` para guardar automáticamente el mejor modelo durante el entrenamiento.
 
 La configuración fue:
 
-| Parámetro | Valor |
-|---|---|
-| Archivo | `models/best_model.keras` |
-| Monitorización | `val_accuracy` |
-| `save_best_only` | `True` |
-| Modo | `max` |
+| Parámetro        | Valor                     |
+| :--------------- | :------------------------ |
+| Archivo          | `models/best_model.keras` |
+| Monitorización   | `val_accuracy`            |
+| `save_best_only` | `True`                    |
+| Modo             | `max`                     |
 
 De esta manera, el archivo conserva los pesos correspondientes a la época con mayor precisión de validación.
 
@@ -387,13 +391,13 @@ También se implementó `EarlyStopping` para controlar el proceso de entrenamien
 
 Su configuración fue:
 
-| Parámetro | Valor |
-|---|---|
-| Monitorización | `val_loss` |
-| Patience | 3 |
-| `restore_best_weights` | `True` |
+| Parámetro              | Valor      |
+| :--------------------- | :--------- |
+| Monitorización         | `val_loss` |
+| Patience               | 3          |
+| `restore_best_weights` | `True`     |
 
-Al finalizar, el callback restauró los pesos correspondientes a la época con menor pérdida de validación.
+Al finalizar, este callback restaura los pesos correspondientes a la época con menor pérdida de validación.
 
 ### 7.4. Parámetros de entrenamiento
 
@@ -405,11 +409,11 @@ Se utilizó `model.fit()` para entrenar el modelo con los siguientes parámetros
 - Batch size: 8 imágenes.
 - Callbacks: `ModelCheckpoint` y `EarlyStopping`.
 
-### 7.5. Problemas de memoria y ajustes realizados
+### 7.5. Problemas de recursos y ajustes realizados
 
-Durante las primeras pruebas se utilizó un batch size de 32 imágenes. Sin embargo, el proceso de entrenamiento fue terminado por el entorno, probablemente debido a las limitaciones de memoria RAM disponibles en Codespaces.
+Durante las primeras pruebas se utilizó un batch size de 32 imágenes. Sin embargo, el proceso de entrenamiento fue interrumpido por el entorno, posiblemente debido a las limitaciones de recursos disponibles en Codespaces. No se pudo confirmar la causa exacta.
 
-Para solucionar este problema, se redujo el batch size a 8 imágenes.
+Para solucionar el problema, se redujo el batch size a 8 imágenes.
 
 Con este ajuste, el entrenamiento pudo completarse correctamente.
 
@@ -417,135 +421,201 @@ Además, el entorno no disponía de GPU CUDA, por lo que el entrenamiento se rea
 
 ### 7.6. Resultados del entrenamiento
 
-La tabla siguiente se conserva del entrenamiento anterior, que utilizó incorrectamente el antiguo conjunto de prueba como validación. Son cifras históricas y no describen el nuevo split:
+Después de corregir el problema de data leakage e implementar conjuntos independientes de entrenamiento, validación y prueba, se volvió a entrenar el modelo.
 
-| Época | Accuracy | Loss | Val. Accuracy | Val. Loss |
-|---:|---:|---:|---:|---:|
-| 1 | 59,15 % | 0,6762 | 58,26 % | 0,6691 |
-| 2 | 68,83 % | 0,5900 | 72,60 % | 0,5391 |
-| 3 | 77,57 % | 0,4809 | 82,28 % | 0,3982 |
-| 4 | 82,82 % | 0,3889 | 84,68 % | 0,3535 |
-| 5 | 86,25 % | 0,3210 | 88,12 % | 0,2820 |
-| 6 | 89,47 % | 0,2581 | 88,32 % | 0,2881 |
-| 7 | 91,17 % | 0,2183 | 90,34 % | 0,2397 |
-| 8 | 92,56 % | 0,1858 | 91,10 % | 0,2306 |
-| 9 | 93,67 % | 0,1603 | 91,32 % | 0,2307 |
-| 10 | 94,48 % | 0,1395 | 91,12 % | 0,2366 |
+Los resultados obtenidos fueron los siguientes:
+
+| Época | Accuracy | Loss   | Val. Accuracy | Val. Loss |
+| ----: | -------: | -----: | ------------: | --------: |
+| 1     | 55,69 %  | 0,6888 | 58,52 %       | 0,6594    |
+| 2     | 64,80 %  | 0,6260 | 72,24 %       | 0,5523    |
+| 3     | 73,91 %  | 0,5299 | 80,60 %       | 0,4406    |
+| 4     | 79,65 %  | 0,4476 | 82,56 %       | 0,4038    |
+| 5     | 83,03 %  | 0,3883 | 85,84 %       | 0,3211    |
+| 6     | 85,79 %  | 0,3313 | 88,20 %       | 0,2810    |
+| 7     | 88,68 %  | 0,2771 | 88,56 %       | 0,2719    |
+| 8     | 90,85 %  | 0,2322 | 91,48 %       | 0,2145    |
+| 9     | 92,36 %  | 0,1998 | 91,04 %       | 0,2279    |
+| 10    | 93,22 %  | 0,1720 | 91,04 %       | 0,2142    |
+
+El modelo mostró una mejora continua en la precisión de entrenamiento durante las 10 épocas.
+
+La mayor precisión de validación se alcanzó en la época 8, con un resultado del 91,48 %.
 
 ### 7.7. Selección del mejor modelo
 
-En el entrenamiento anterior, `ModelCheckpoint` guardó la época 9 con una accuracy de validación del 91,32 %. Esos datos de validación también eran el antiguo conjunto de prueba, así que esta cifra no es una métrica de prueba independiente ni corresponde a una nueva ejecución con el split corregido.
+Los dos callbacks monitorizaron métricas de validación diferentes:
 
-En aquella ejecución, `EarlyStopping` monitorizaba `val_loss` y restauró los pesos de la época 8, que obtuvo la menor pérdida de validación: 0,2306. El archivo `models/best_model.keras` existente también procede de la ejecución anterior; vuelve a entrenar con el split corregido antes de evaluarlo.
+- `ModelCheckpoint` monitorizó `val_accuracy` y guardó el modelo de la época 8, que alcanzó la mayor precisión de validación: 91,48 %.
+- `EarlyStopping` monitorizó `val_loss` y restauró los pesos de la época 10, que obtuvo la menor pérdida de validación: 0,2142.
 
-### 7.8. Consideración sobre los datos de validación
+Por tanto, el archivo `models/best_model.keras` contiene el modelo seleccionado por `ModelCheckpoint`, correspondiente a la época 8.
 
-El flujo corregido utiliza `valdata` mediante el parámetro `validation_data`. `tsdata` no se emplea durante el entrenamiento ni para seleccionar el checkpoint, y queda reservado para la evaluación final. El 91,32 % reportado anteriormente procede del antiguo conjunto de prueba reutilizado y no debe interpretarse como una métrica independiente. Para obtener nuevas métricas de test es necesario volver a entrenar con los tres conjuntos.
+Este es el modelo que cargan posteriormente los scripts de evaluación y predicción individual.
+
+### 7.8. Consideraciones sobre los datos de validación
+
+El flujo corregido utiliza `valdata` mediante el parámetro `validation_data`.
+
+El conjunto de validación permite monitorizar el rendimiento del modelo durante el entrenamiento y determinar qué pesos deben guardarse.
+
+El conjunto de prueba (`tsdata`) no se utiliza durante el entrenamiento, la validación, el early stopping ni la selección del checkpoint. Se mantiene reservado para la evaluación final.
+
+Esta separación evita el problema de data leakage identificado durante el proceso de entrenamiento anterior y permite obtener una medición independiente de la capacidad de generalización del modelo.
 
 ### 7.9. Resultado
 
-El entrenamiento finalizó correctamente y se generó el archivo:
+El entrenamiento se completó correctamente después de implementar la división corregida de los datos y reducir el batch size a 8 imágenes.
+
+El proceso generó el siguiente archivo:
 
 ```text
 models/best_model.keras
 ```
 
-La nueva ejecución de entrenamiento guardará en esta ruta el modelo seleccionado por `ModelCheckpoint`. El archivo que ya existe en el workspace corresponde a la ejecución anterior y debe reemplazarse antes de la evaluación final.
+El modelo guardado corresponde a la época 8, con una precisión de validación del 91,48 %.
+
+Posteriormente, este modelo se utilizó para realizar la evaluación final sobre el conjunto de prueba independiente.
 
 ## 8. Evaluación del modelo
 
-### 8.1. Objetivo
+### 8.1 Evaluación sobre el conjunto de test
 
-Una vez finalizado el entrenamiento, se evaluó el modelo para medir su capacidad de clasificación y comprobar qué tan bien identificaba las imágenes de gatos y perros.
+Una vez finalizado el entrenamiento, se evaluó el modelo guardado en `models/best_model.keras` utilizando el conjunto de test (`tsdata`).
 
-Para ello, se utilizan el modelo guardado mediante `ModelCheckpoint` y el generador `tsdata`.
+Este conjunto contiene 2.500 imágenes que no participaron en el entrenamiento ni en la selección del mejor modelo. Por tanto, permite medir el rendimiento del modelo sobre datos independientes.
 
-### 8.2. Implementación
+Resultados obtenidos:
 
-Se creó el archivo:
+| Métrica | Resultado |
+|---|---:|
+| Test Loss | 0.2581 |
+| Test Accuracy | 88.76% |
+| Predicciones correctas | 2.219 |
+| Predicciones incorrectas | 281 |
+| Total de imágenes | 2.500 |
+
+La precisión global del 88.76% indica que el modelo clasificó correctamente 2.219 de las 2.500 imágenes evaluadas.
+
+### 8.2 Matriz de confusión
+
+La matriz de confusión obtenida fue:
 
 ```text
-src/evaluate.py
+[[1061  189]
+ [  92 1158]]
 ```
 
-En este script se utilizaron las siguientes herramientas:
+Las filas representan las clases reales y las columnas las clases predichas, en el siguiente orden: `cats` y `dogs`.
 
-- `load_model`: para cargar el modelo entrenado.
-- `model.evaluate()`: para calcular la pérdida y la precisión.
-- `model.predict()`: para generar predicciones sobre las imágenes.
-- `numpy.argmax()`: para convertir las probabilidades en etiquetas de clase.
-- `accuracy_score`: para calcular la precisión.
-- `confusion_matrix`: para generar la matriz de confusión.
-- `classification_report`: para obtener las métricas de clasificación.
+| Clase real | Predichas como cats | Predichas como dogs |
+|---|---:|---:|
+| cats | 1061 | 189 |
+| dogs | 92 | 1158 |
 
-### 8.3. Métricas generales
+Interpretación:
 
-La ejecución anterior reportó una accuracy del 91,32 %, pero evaluó las mismas imágenes usadas para validación y selección del modelo. Esa cifra no es una medición de prueba independiente y se retiró de los resultados actuales. Ejecuta `src/train.py` y después `src/evaluate.py` para generar métricas sobre el conjunto de prueba reservado de 2.500 imágenes.
+- **Cats:** 1.061 imágenes de gatos fueron clasificadas correctamente, mientras que 189 fueron clasificadas como perros.
+- **Dogs:** 1.158 imágenes de perros fueron clasificadas correctamente, mientras que 92 fueron clasificadas como gatos.
 
-### 8.4. Resultado
+El modelo clasificó correctamente más imágenes de perros que de gatos.
 
-El script de evaluación calcula loss, accuracy, matriz de confusión e informe de clasificación únicamente para `tsdata`. No hay un resultado independiente disponible hasta volver a entrenar con el split corregido.
+### 8.3 Classification Report
+
+El informe de clasificación obtenido fue:
+
+```text
+              precision    recall  f1-score   support
+
+        cats       0.92      0.85      0.88      1250
+        dogs       0.86      0.93      0.89      1250
+
+    accuracy                           0.89      2500
+   macro avg       0.89      0.89      0.89      2500
+weighted avg       0.89      0.89      0.89      2500
+```
+
+Interpretación de las métricas:
+
+- **Precision:** indica qué proporción de las predicciones de una clase fueron correctas.
+- **Recall:** indica qué proporción de las imágenes reales de una clase fueron identificadas correctamente.
+- **F1-score:** combina precision y recall en una única métrica.
+- **Support:** representa el número de imágenes reales de cada clase evaluadas.
+
+El modelo obtuvo un recall del 93% para perros y del 85% para gatos. Esto indica que identificó una proporción mayor de imágenes de perros que de gatos.
+
+### 8.4 Comparación entre validation y test
+
+La mejor precisión obtenida durante el entrenamiento fue del 91.48% en el conjunto de validación (epoch 8).
+
+Al evaluar el modelo guardado sobre el conjunto de test, la precisión fue del 88.76%.
+
+La diferencia entre ambas métricas es de 2.72 puntos porcentuales. Esta diferencia es compatible con una pérdida moderada de rendimiento al evaluar el modelo sobre imágenes independientes que no participaron en el entrenamiento ni en la selección del checkpoint.
+
+### 8.5 Conclusión de la evaluación
+
+El modelo alcanzó una precisión del 88.76% sobre el conjunto de test, clasificando correctamente 2.219 de las 2.500 imágenes.
+
+Los resultados muestran que EfficientNetB0 puede distinguir ambas categorías con un rendimiento satisfactorio, aunque todavía presenta errores de clasificación, especialmente al identificar algunas imágenes de gatos como perros.
+
+La evaluación se realizó utilizando un conjunto de test independiente, evitando reutilizar los datos de entrenamiento o validación para medir el rendimiento final.
 
 ## 9. Predicciones individuales
 
-### 9.1. Objetivo
+### 9.1 Objetivo
 
-Además de evaluar el modelo sobre el conjunto de prueba, se implementó una funcionalidad que permite introducir una imagen individual y obtener una predicción.
+Además de la evaluación general del modelo, se realizaron pruebas individuales para comprobar cómo clasifica imágenes concretas.
 
-Esto permite comprobar el funcionamiento del clasificador con imágenes seleccionadas manualmente.
+Para ello se utilizó el script `src/predict.py`, que permite introducir la ruta de una imagen y obtener:
 
-### 9.2. Implementación
+- La clase predicha (`cats` o `dogs`).
+- El nivel de confianza de la predicción.
 
-Se creó el archivo:
+### 9.2 Primera prueba: imagen del conjunto de entrenamiento
 
-```text
-src/predict.py
-```
-
-El script realiza las siguientes operaciones:
-
-1. Carga el modelo entrenado desde `models/best_model.keras`.
-2. Solicita al usuario la ruta de una imagen.
-3. Carga la imagen utilizando `load_img()`.
-4. Redimensiona la imagen a 224 × 224 píxeles.
-5. Convierte la imagen en un array numérico mediante `img_to_array()`.
-6. Añade una dimensión adicional para crear un lote de una imagen utilizando `numpy.expand_dims()`.
-7. Ejecuta `model.predict()` para obtener las probabilidades de clasificación.
-8. Utiliza `numpy.argmax()` para seleccionar la categoría con mayor probabilidad.
-9. Muestra la categoría predicha y el porcentaje de confianza.
-
-### 9.3. Ejecución
-
-Desde la raíz del proyecto se puede ejecutar:
-
-```bash
-python src/predict.py
-```
-
-El programa solicita la ruta de la imagen:
+Se utilizó la siguiente imagen:
 
 ```text
-Enter the image path:
+data/raw/dogs-vs-cats/train/cat.10.jpg
 ```
 
-El usuario introduce la ruta correspondiente y el modelo devuelve el resultado.
+Resultado obtenido:
 
-### 9.4. Pruebas realizadas
+```text
+Predicted class: cats
+Confidence: 99.22%
+```
 
-Se realizaron pruebas con dos imágenes del dataset original:
+El modelo identificó correctamente la imagen como un gato, con una confianza del 99.22%.
 
-| Imagen | Categoría predicha | Confianza |
-|---|---|---:|
-| `cat.10.jpg` | Cats | 98,88 % |
-| `dog.10.jpg` | Dogs | 99,26 % |
+Esta imagen pertenece al conjunto de entrenamiento, por lo que no constituye una prueba independiente del rendimiento del modelo.
 
-Ambas imágenes fueron clasificadas correctamente.
+### 9.3 Segunda prueba: imagen del conjunto de test
 
-### 9.5. Resultado
+Se utilizó una imagen del conjunto de test:
 
-La funcionalidad de predicción individual se implementó correctamente y permite utilizar el modelo entrenado para clasificar imágenes de gatos y perros de forma independiente.
+```text
+data/processed_split/test/cats/cat.1.jpg
+```
 
-El porcentaje mostrado representa la probabilidad asignada por el modelo a la categoría predicha, no una garantía de que la clasificación sea correcta.
+Resultado obtenido:
+
+```text
+Predicted class: cats
+Confidence: 99.95%
+```
+
+El modelo identificó correctamente la imagen como un gato, con una confianza del 99.95%.
+
+A diferencia de la primera prueba, esta imagen pertenece al conjunto de test, que no se utilizó durante el entrenamiento ni para seleccionar el mejor checkpoint.
+
+### 9.4 Interpretación de los resultados
+
+Ambas predicciones individuales fueron correctas.
+
+La confianza representa la probabilidad que el modelo asigna a la clase predicha mediante su capa de salida Softmax. No debe interpretarse como una garantía de que la clasificación sea correcta.
+
+Estas pruebas permiten comprobar el funcionamiento del script de predicción con imágenes concretas. Sin embargo, el rendimiento general del modelo debe valorarse principalmente mediante la evaluación completa del conjunto de test, cuyos resultados se presentan en la sección anterior.
 
 ## 10. Problemas encontrados y soluciones
 
@@ -555,11 +625,11 @@ Durante el desarrollo del proyecto surgieron diferentes dificultades relacionada
 
 **Problema:**
 
-Durante las primeras pruebas de entrenamiento, se utilizó un batch size de 32 imágenes. El proceso fue terminado por el entorno de Codespaces, probablemente debido al consumo de memoria.
+Durante las primeras pruebas, el proceso de entrenamiento se interrumpió antes de completar la primera época. El problema pudo estar relacionado con las limitaciones de recursos disponibles en GitHub Codespaces, aunque no se pudo confirmar la causa exacta.
 
 **Solución:**
 
-Se redujo el batch size a 8 imágenes para disminuir el consumo de memoria y permitir que el entrenamiento pudiera completarse correctamente.
+Para solucionar el problema, se redujo el tamaño del batch de 32 a 8 imágenes. Con esta configuración, el entrenamiento pudo completarse correctamente.
 
 ### 10.2. Compatibilidad de ImageDataGenerator con Keras
 
@@ -601,7 +671,7 @@ El entrenamiento se realizó utilizando CPU. Aunque esto incrementó el tiempo d
 
 **Problema:**
 
-La organización del dataset requería separar las imágenes originales en directorios de entrenamiento y prueba, lo que podía generar duplicación de archivos y un consumo innecesario de almacenamiento.
+La organización del dataset requería separar las imágenes originales en directorios de entrenamiento, validación y prueba, lo que podía generar duplicación de archivos y un consumo innecesario de almacenamiento.
 
 **Solución:**
 
@@ -624,43 +694,71 @@ Se completó el desarrollo de un clasificador binario de imágenes capaz de dist
 Durante el proyecto se realizaron las siguientes tareas:
 
 - Descarga y organización de un dataset de 25.000 imágenes.
-- División de los datos en conjuntos de entrenamiento, validación y prueba.
+- División de los datos en conjuntos independientes de entrenamiento, validación y prueba.
 - Exploración y visualización de imágenes.
 - Implementación de generadores de datos con `ImageDataGenerator`.
 - Construcción y compilación de una red neuronal basada en EfficientNetB0.
-- Entrenamiento del modelo utilizando callbacks.
+- Entrenamiento del modelo utilizando `ModelCheckpoint` y `EarlyStopping`.
 - Evaluación mediante métricas de clasificación y matriz de confusión.
 - Implementación de un script para realizar predicciones individuales.
-- Documentación del proceso y de las soluciones técnicas aplicadas.
+- Documentación del proceso de desarrollo y de las soluciones técnicas aplicadas.
 
-### 11.2. Resultados obtenidos
+### 11.2. Resumen de resultados
+
+El modelo final se evaluó utilizando un conjunto de prueba independiente compuesto por 2.500 imágenes.
 
 | Indicador | Resultado |
-|---|---:|
+| :--- | ---: |
 | Imágenes originales | 25.000 |
 | Imágenes de entrenamiento | 20.000 |
 | Imágenes de validación | 2.500 |
 | Imágenes de prueba | 2.500 |
 | Arquitectura | EfficientNetB0 |
-| Nueva accuracy de validación | Pendiente de reentrenar |
-| Accuracy de prueba independiente | Pendiente de reentrenar |
+| Parámetros totales | 4.213.797 |
+| Mejor accuracy de validación | 91.48% |
+| Accuracy de prueba independiente | 88.76% |
+| Test loss | 0.2581 |
+| Predicciones correctas | 2.219 |
+| Predicciones incorrectas | 281 |
 | Modelo guardado | `best_model.keras` |
 
-### 11.3. Limitaciones y posibles mejoras
+El modelo clasificó correctamente 2.219 de las 2.500 imágenes del conjunto de prueba, alcanzando una accuracy del 88.76%.
 
-Aunque el proyecto se completó correctamente, existen algunas oportunidades de mejora:
+La matriz de confusión y el informe de clasificación proporcionan información adicional sobre el rendimiento en cada categoría. El modelo obtuvo un recall del 85% para gatos y del 93% para perros.
+
+La mejor accuracy de validación fue del 91.48%, alcanzada durante la época 8. El checkpoint guardado se seleccionó utilizando `val_accuracy`, mientras que `EarlyStopping` monitorizó `val_loss`.
+
+### 11.3. Archivos principales del proyecto
+
+El proyecto está organizado en diferentes scripts, cada uno responsable de una etapa específica del proceso de clasificación:
+
+- `src/prepare_dataset.py`: prepara el dataset y crea las divisiones de entrenamiento, validación y prueba.
+- `src/data_loader.py`: carga las imágenes y crea los generadores de datos.
+- `src/model.py`: define y compila el modelo basado en EfficientNetB0.
+- `src/train.py`: ejecuta el entrenamiento del modelo y aplica los callbacks.
+- `src/evaluate.py`: evalúa el modelo guardado utilizando el conjunto de prueba independiente.
+- `src/predict.py`: realiza predicciones individuales sobre imágenes.
+- `models/best_model.keras`: almacena el mejor checkpoint seleccionado durante el entrenamiento.
+
+### 11.4. Limitaciones y posibles mejoras
+
+Aunque el proyecto se completó correctamente, existen varias oportunidades de mejora:
 
 1. **Pesos preentrenados:** experimentar con EfficientNetB0 utilizando pesos preentrenados de ImageNet mediante transferencia de aprendizaje (*transfer learning*).
 2. **Aumento de datos:** incorporar técnicas de *data augmentation* para mejorar la capacidad de generalización del modelo.
 3. **Optimización del entrenamiento:** probar diferentes tamaños de batch, optimizadores y tasas de aprendizaje.
 4. **Visualización de resultados:** incorporar gráficos de evolución de accuracy y loss, así como una visualización de la matriz de confusión.
+5. **Rendimiento del modelo:** analizar los errores de clasificación, especialmente las imágenes de gatos clasificadas incorrectamente como perros, para identificar posibles mejoras.
 
-### 11.4. Conclusión
+### 11.5. Conclusión
 
 El proyecto permitió implementar un flujo completo de clasificación de imágenes mediante técnicas de aprendizaje profundo.
 
-El repositorio ahora separa los datos de entrenamiento, validación y prueba. El 91,32 % reportado anteriormente procedía de un conjunto de prueba reutilizado y no es un resultado independiente; es necesario volver a entrenar para informar métricas válidas de test. También se implementó una funcionalidad para realizar predicciones sobre imágenes individuales.
+El dataset se dividió en conjuntos independientes de entrenamiento, validación y prueba, garantizando que la evaluación final se realizara con datos que no habían participado en el entrenamiento ni en la selección del checkpoint.
 
-El desarrollo también permitió trabajar con herramientas de Python, TensorFlow, Keras, procesamiento de imágenes, evaluación de modelos y gestión de proyectos mediante Git y GitHub.
+El clasificador basado en EfficientNetB0 alcanzó una accuracy del 88.76% sobre el conjunto de prueba independiente. Los resultados demuestran que el modelo puede distinguir entre gatos y perros con un rendimiento satisfactorio, aunque todavía presenta algunos errores de clasificación.
 
+Las pruebas de predicción individual también permitieron comprobar el funcionamiento del script con imágenes concretas.
+
+El desarrollo permitió adquirir experiencia práctica con Python, TensorFlow, Keras, procesamiento de imágenes, entrenamiento y evaluación de modelos, y gestión de proyectos mediante Git y GitHub.
 ---

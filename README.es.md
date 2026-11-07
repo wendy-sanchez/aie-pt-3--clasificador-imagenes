@@ -1,4 +1,4 @@
-# Clasificador de Imagen Dog vs. Cat
+# Clasificador de Imágenes Dog vs. Cat
 
 Un proyecto de clasificación de imágenes que utiliza aprendizaje profundo (Deep Learning) y EfficientNetB0 para distinguir entre gatos y perros.
 
@@ -10,7 +10,7 @@ Un proyecto de clasificación de imágenes que utiliza aprendizaje profundo (Dee
 
 Este proyecto implementa un sistema de clasificación binaria de imágenes capaz de identificar si una fotografía contiene un gato o un perro.
 
-El modelo está desarrollado utilizando **EfficientNetB0**, una arquitectura de red neuronal convolucional, junto con TensorFlow y Keras. El sistema se entrena con el conjunto de datos Dogs vs. Cats y se evalúa utilizando un directorio independiente de imágenes de prueba.
+El modelo está desarrollado utilizando **EfficientNetB0**, una arquitectura de red neuronal convolucional, junto con TensorFlow y Keras. El sistema se entrena con el conjunto de datos Dogs vs. Cats y se evalúa utilizando un conjunto de prueba independiente.
 
 El proyecto se desarrolló como parte de un ejercicio práctico de formación en Machine Learning y Deep Learning.
 
@@ -34,14 +34,16 @@ El conjunto de datos contiene 25.000 imágenes etiquetadas:
 - 12.500 imágenes de gatos.
 - 12.500 imágenes de perros.
 
-Las imágenes se organizan en directorios de entrenamiento, validación y prueba, con subdirectorios independientes para cada clase.
+El dataset se divide en tres subconjuntos independientes mediante una distribución 80/10/10:
 
-| Conjunto | Imágenes |
-|---|---:|
-| Entrenamiento | 20.000 |
-| Validación | 2.500 |
-| Prueba | 2.500 |
-| **Total** | **25.000** |
+| Conjunto | Imágenes | Porcentaje |
+| :--- | ---: | ---: |
+| Entrenamiento | 20.000 | 80 % |
+| Validación | 2.500 | 10 % |
+| Prueba | 2.500 | 10 % |
+| **Total** | **25.000** | **100 %** |
+
+Cada subconjunto contiene imágenes de ambas clases, con una distribución equilibrada entre gatos y perros.
 
 ## Tecnologías y librerías
 
@@ -70,26 +72,28 @@ El modelo se compila utilizando el optimizador Adam y la función de pérdida Ca
 
 ## Procesamiento de datos
 
-Debido a que el entorno de trabajo dispone de menos de 12 GB de RAM, las imágenes se cargan progresivamente utilizando `ImageDataGenerator` y `flow_from_directory()` de Keras.
+Las imágenes se cargan progresivamente utilizando `ImageDataGenerator` y `flow_from_directory()` de Keras.
 
 Este procedimiento evita cargar todo el conjunto de datos simultáneamente en memoria.
 
 El dataset se divide en:
 
 - `train/`: imágenes utilizadas para actualizar los pesos del modelo.
-- `validation/`: imágenes utilizadas para decidir la parada temprana y seleccionar el mejor modelo.
+- `validation/`: imágenes utilizadas para seleccionar el mejor modelo y controlar la parada temprana.
 - `test/`: imágenes reservadas exclusivamente para la evaluación final.
 
 Cada directorio contiene dos subcarpetas correspondientes a las clases: `cats/` y `dogs/`.
 
 Las imágenes se redimensionan a 224 × 224 píxeles durante su carga mediante los generadores.
 
+El script de preparación utiliza una semilla aleatoria fija para generar una distribución reproducible. Además, utiliza enlaces físicos (*hard links*) para evitar duplicar los archivos de imagen.
+
 ## Entrenamiento y optimización
 
 El modelo se entrena con la siguiente configuración:
 
 - Batch size: 8.
-- Épocas: 10.
+- Número máximo de épocas: 10.
 - Optimizador: Adam.
 - Función de pérdida: Categorical Crossentropy.
 - Métrica de evaluación: Accuracy.
@@ -97,15 +101,19 @@ El modelo se entrena con la siguiente configuración:
 Se implementan dos funciones callback:
 
 - **ModelCheckpoint:** guarda el modelo que obtiene la mejor accuracy de validación.
-- **EarlyStopping:** detiene el entrenamiento cuando la pérdida de validación deja de mejorar y restaura los pesos de la mejor época.
+- **EarlyStopping:** monitoriza la pérdida de validación, detiene el entrenamiento cuando deja de mejorar y restaura los pesos correspondientes a la mejor época según esta métrica.
 
-El mejor modelo se guarda en:
+El mejor modelo según la accuracy de validación se guarda en:
 
 `models/best_model.keras`
 
+El entrenamiento completó las 10 épocas. La mejor accuracy de validación se alcanzó durante la época 8.
+
 ## Evaluación del modelo
 
-El modelo se evalúa utilizando las siguientes métricas:
+La evaluación final se realiza utilizando el subconjunto de prueba independiente, que no interviene en el entrenamiento, la parada temprana ni la selección del modelo.
+
+Se utilizan las siguientes métricas, calculadas mediante Scikit-learn:
 
 - Accuracy.
 - Loss.
@@ -114,27 +122,62 @@ El modelo se evalúa utilizando las siguientes métricas:
 - Recall.
 - F1-score.
 
-Se utiliza Scikit-learn para calcular las métricas de clasificación.
+### Resultados finales
 
-### Resultados
+El modelo obtuvo los siguientes resultados sobre las 2.500 imágenes del conjunto de prueba:
 
-La accuracy del 91,32 % reportada anteriormente se midió sobre imágenes que también se utilizaron para validación y selección del modelo. No es un resultado de prueba independiente y no se presenta como tal. Ejecuta el entrenamiento y luego `src/evaluate.py` para obtener las métricas del conjunto de prueba reservado.
+| Métrica | Resultado |
+| :--- | ---: |
+| Accuracy en test | **88,76 %** |
+| Test Loss | 0,2581 |
+| Predicciones correctas | 2.219 |
+| Predicciones incorrectas | 281 |
+
+La mejor accuracy de validación obtenida durante el entrenamiento fue del **91,48 %**, durante la época 8.
+
+### Matriz de confusión
+
+La matriz de confusión muestra la relación entre las clases reales y las predichas:
+
+| Clase real | Predicción: gatos | Predicción: perros |
+| :--- | ---: | ---: |
+| Gatos | 1.061 | 189 |
+| Perros | 92 | 1.158 |
+
+### Informe de clasificación
+
+| Clase | Precision | Recall | F1-score | Support |
+| :--- | ---: | ---: | ---: | ---: |
+| Gatos | 0,92 | 0,85 | 0,88 | 1.250 |
+| Perros | 0,86 | 0,93 | 0,89 | 1.250 |
+| **Promedio macro** | **0,89** | **0,89** | **0,89** | **2.500** |
+| **Promedio ponderado** | **0,89** | **0,89** | **0,89** | **2.500** |
+
+El modelo obtiene un F1-score equilibrado entre ambas clases. Presenta un mayor recall para los perros, mientras que la precision es superior para los gatos.
+
+Estos resultados proporcionan una medida independiente de la capacidad de generalización del modelo.
 
 ## Predicciones de imágenes individuales
 
-El proyecto incluye un script de predicción que carga el modelo entrenado y clasifica imágenes individuales.
+El proyecto incluye un script para clasificar imágenes individuales utilizando el modelo entrenado.
 
-El programa devuelve:
+Ejecuta:
 
-- Clase predicha (gatos o perros).
-- Nivel de confianza de la predicción.
+```bash
+python src/predict.py
+```
 
-Ejemplo:
+Cuando el programa lo solicite, introduce la ruta de la imagen.
+
+**Ejemplo utilizando una imagen del conjunto de prueba:**
 
 ```text
+Enter the image path: data/processed_split/test/cats/cat.1.jpg
 Predicted class: cats
-Confidence: 98.88%
+Confidence: 99.95%
 ```
+
+El porcentaje de confianza representa la probabilidad que el modelo asigna a la clase predicha. No garantiza que la predicción sea correcta.
 
 ## Estructura del proyecto
 
@@ -143,7 +186,7 @@ aie-pt-3--clasificador-imagenes/
 │
 ├── data/
 │   ├── raw/
-│   ├── processed_split/
+│   └── processed_split/
 │       ├── train/
 │       │   ├── cats/
 │       │   └── dogs/
@@ -236,7 +279,7 @@ src/explore.ipynb
 python src/train.py
 ```
 
-El mejor modelo se guardará en:
+El mejor modelo según la accuracy de validación se guardará en:
 
 ```text
 models/best_model.keras
@@ -247,6 +290,8 @@ models/best_model.keras
 ```bash
 python src/evaluate.py
 ```
+
+Este script carga el modelo guardado, lo evalúa utilizando el subconjunto de prueba independiente y muestra las métricas de evaluación, la matriz de confusión y el informe de clasificación.
 
 ### 8. Predecir una imagen individual
 
@@ -266,8 +311,9 @@ data/raw/dogs-vs-cats/train/cat.10.jpg
 - Es necesario descargar y preparar el dataset antes de ejecutar los scripts de entrenamiento, evaluación o predicción.
 - El proyecto utiliza imágenes de 224 × 224 píxeles para mantener la compatibilidad con las dimensiones de entrada especificadas para EfficientNetB0.
 - El tiempo de entrenamiento depende del hardware disponible. El entrenamiento mediante CPU puede tardar considerablemente más que utilizando GPU.
+- El subconjunto de prueba debe mantenerse independiente y utilizarse exclusivamente para la evaluación final del modelo.
 
 ---
 
-**Developed by Wendy Sanchez**  
-**Machine Learning & Deep Learning Project**
+**Desarrollado por Wendy Sanchez**  
+**Proyecto de Machine Learning & Deep Learning**

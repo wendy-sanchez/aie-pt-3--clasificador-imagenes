@@ -234,7 +234,7 @@ The batch size was set to 8 images to reduce memory consumption during processin
 
 ### 5.3. Generator Creation
 
-Two independent generators were created:
+Three independent generators were created:
 
 - `trdata`: loads the training images.
 - `valdata`: loads the validation images.
@@ -363,20 +363,24 @@ The data generators (`trdata` and `valdata`), the previously defined model, and 
 - `ModelCheckpoint`
 - `EarlyStopping`
 
+The training process uses the training dataset to update the model weights and the validation dataset to monitor performance and select the best model.
+
+The test dataset (`tsdata`) is not used during training or model selection. It is reserved exclusively for the final evaluation.
+
 ### 7.2. ModelCheckpoint Configuration
 
 `ModelCheckpoint` was used to automatically save the best model during training.
 
 The configuration was:
 
-| Parameter | Value |
-|---|---|
-| File | `models/best_model.keras` |
-| Monitor | `val_accuracy` |
-| `save_best_only` | `True` |
-| Mode | `max` |
+| Parameter        | Value                     |
+| :--------------- | :------------------------ |
+| File             | `models/best_model.keras` |
+| Monitor          | `val_accuracy`            |
+| `save_best_only` | `True`                    |
+| Mode             | `max`                     |
 
-This configuration ensures that the file stores the weights corresponding to the epoch with the highest validation accuracy.
+This configuration ensures that the saved model corresponds to the epoch with the highest validation accuracy.
 
 ### 7.3. EarlyStopping Configuration
 
@@ -384,13 +388,13 @@ This configuration ensures that the file stores the weights corresponding to the
 
 Its configuration was:
 
-| Parameter | Value |
-|---|---|
-| Monitor | `val_loss` |
-| Patience | 3 |
-| `restore_best_weights` | `True` |
+| Parameter              | Value      |
+| :--------------------- | :--------- |
+| Monitor                | `val_loss` |
+| Patience               | 3          |
+| `restore_best_weights` | `True`     |
 
-At the end of training, the callback restored the weights corresponding to the epoch with the lowest validation loss.
+At the end of training, this callback restores the weights corresponding to the epoch with the lowest validation loss.
 
 ### 7.4. Training Parameters
 
@@ -404,7 +408,7 @@ The model was trained using `model.fit()` with the following parameters:
 
 ### 7.5. Memory Issues and Adjustments
 
-During the initial tests, a batch size of 32 images was used. However, the training process was terminated by the environment, most likely due to the available RAM limitations in Codespaces.
+During the initial tests, a batch size of 32 images was used. However, the training process was terminated by the environment, possibly related to resource limitations in the Codespaces environment. The exact cause was not confirmed.
 
 To solve this issue, the batch size was reduced to 8 images.
 
@@ -414,40 +418,61 @@ Additionally, the environment did not provide a CUDA-compatible GPU, so training
 
 ### 7.6. Training Results
 
-The following table is retained from the earlier training run, which incorrectly used the old test split as validation. These are historical figures and do not describe the corrected split:
+After correcting the data leakage issue and implementing the independent training, validation, and test splits, the model was trained again.
 
-| Epoch | Accuracy | Loss | Val. Accuracy | Val. Loss |
-|---:|---:|---:|---:|---:|
-| 1 | 59.15% | 0.6762 | 58.26% | 0.6691 |
-| 2 | 68.83% | 0.5900 | 72.60% | 0.5391 |
-| 3 | 77.57% | 0.4809 | 82.28% | 0.3982 |
-| 4 | 82.82% | 0.3889 | 84.68% | 0.3535 |
-| 5 | 86.25% | 0.3210 | 88.12% | 0.2820 |
-| 6 | 89.47% | 0.2581 | 88.32% | 0.2881 |
-| 7 | 91.17% | 0.2183 | 90.34% | 0.2397 |
-| 8 | 92.56% | 0.1858 | 91.10% | 0.2306 |
-| 9 | 93.67% | 0.1603 | 91.32% | 0.2307 |
-| 10 | 94.48% | 0.1395 | 91.12% | 0.2366 |
+The following results were obtained:
+
+| Epoch | Accuracy | Loss   | Val. Accuracy | Val. Loss |
+| ----: | -------: | -----: | ------------: | --------: |
+| 1     | 55.69%   | 0.6888 | 58.52%        | 0.6594    |
+| 2     | 64.80%   | 0.6260 | 72.24%        | 0.5523    |
+| 3     | 73.91%   | 0.5299 | 80.60%        | 0.4406    |
+| 4     | 79.65%   | 0.4476 | 82.56%        | 0.4038    |
+| 5     | 83.03%   | 0.3883 | 85.84%        | 0.3211    |
+| 6     | 85.79%   | 0.3313 | 88.20%        | 0.2810    |
+| 7     | 88.68%   | 0.2771 | 88.56%        | 0.2719    |
+| 8     | 90.85%   | 0.2322 | 91.48%        | 0.2145    |
+| 9     | 92.36%   | 0.1998 | 91.04%        | 0.2279    |
+| 10    | 93.22%   | 0.1720 | 91.04%        | 0.2142    |
+
+The model showed continuous improvement in training accuracy throughout the 10 epochs.
+
+The highest validation accuracy was achieved during epoch 8, reaching 91.48%.
 
 ### 7.7. Best Model Selection
 
-In the earlier run, `ModelCheckpoint` saved epoch 9 at 91.32% validation accuracy. That validation data was also the old test set, so this score is not an independent test result and does not apply to a new run with the corrected split.
+The two callbacks monitored different validation metrics:
 
-In that earlier run, `EarlyStopping` monitored `val_loss` and restored the weights from epoch 8, which had the lowest validation loss: 0.2306. The existing `models/best_model.keras` is also from the old run; rerun training with the corrected split before evaluating it.
+- `ModelCheckpoint` monitored `val_accuracy` and saved the model from epoch 8, which achieved the highest validation accuracy of 91.48%.
+- `EarlyStopping` monitored `val_loss` and restored the weights from epoch 10, which achieved the lowest validation loss of 0.2142.
+
+As a result, the file `models/best_model.keras` contains the model selected by `ModelCheckpoint`, corresponding to epoch 8.
+
+This is the model loaded by the evaluation and individual prediction scripts.
 
 ### 7.8. Validation Data Considerations
 
-The corrected pipeline uses `valdata` through the `validation_data` parameter. `tsdata` is not used in training or checkpoint selection and is reserved for the final evaluation. The previously reported 91.32% came from the old, reused test split and must not be interpreted as an independent test score. New test metrics require retraining with the three-way split.
+The corrected pipeline uses `valdata` through the `validation_data` parameter.
+
+The validation dataset is used to monitor the model's performance during training and to determine which model weights should be saved.
+
+The test dataset (`tsdata`) is not used for training, validation, early stopping, or checkpoint selection. It remains reserved for the final evaluation.
+
+This separation prevents the data leakage issue identified during the earlier training process and provides an independent measurement of the model's generalization performance.
 
 ### 7.9. Result
 
-Training was completed successfully, generating the following file:
+Training was completed successfully after implementing the corrected data split and reducing the batch size to 8 images.
+
+The training process generated the following model file:
 
 ```text
 models/best_model.keras
 ```
 
-The new training run writes the model selected by `ModelCheckpoint` to this path. The file already present in the repository workspace is from the earlier run and must be replaced before final evaluation.
+The saved model corresponds to epoch 8, with a validation accuracy of 91.48%.
+
+This model was subsequently used for the final evaluation on the independent test dataset.
 
 ## 8. Model Evaluation
 
@@ -455,7 +480,9 @@ The new training run writes the model selected by `ModelCheckpoint` to this path
 
 Once training was completed, the model was evaluated to measure its classification performance and determine how accurately it identified cat and dog images.
 
-For this purpose, the model saved through `ModelCheckpoint` and the `tsdata` generator are used.
+For this purpose, the model saved through `ModelCheckpoint` and the independent test dataset (`tsdata`) were used.
+
+The test dataset contains 2,500 images that were not used during training or model selection.
 
 ### 8.2. Implementation
 
@@ -473,15 +500,78 @@ The following tools were used in this script:
 - `numpy.argmax()`: converts prediction probabilities into class labels.
 - `accuracy_score`: calculates accuracy.
 - `confusion_matrix`: generates the confusion matrix.
-- `classification_report`: provides classification metrics.
+- `classification_report`: provides classification metrics, including precision, recall, and F1-score.
 
 ### 8.3. General Metrics
 
-The previous run reported 91.32% accuracy, but it evaluated the same images used for validation and model selection. That result is not an independent test measurement and has been removed from the current results. Run `src/train.py` and then `src/evaluate.py` to generate metrics for the reserved 2,500-image test split.
+The model was evaluated using the 2,500 images from the independent test dataset.
 
-### 8.4. Result
+The following results were obtained:
 
-The evaluation script reports loss, accuracy, a confusion matrix, and a classification report for `tsdata` only. No independent result is available until the model is retrained with the corrected split.
+| Metric       | Result |
+| :----------- | -----: |
+| Test Loss    | 0.2581 |
+| Test Accuracy | 88.76% |
+| Correct Predictions | 2,219 |
+| Incorrect Predictions | 281 |
+
+The model correctly classified 2,219 out of 2,500 images, achieving an accuracy of 88.76%.
+
+### 8.4. Confusion Matrix
+
+The confusion matrix was generated to examine the model's classification results for each category.
+
+```text
+[[1061  189]
+ [  92 1158]]
+```
+
+The matrix is interpreted as follows:
+
+| Actual Class | Predicted Cats | Predicted Dogs |
+| :----------- | -------------: | -------------: |
+| Cats         | 1,061          | 189            |
+| Dogs         | 92             | 1,158          |
+
+The model correctly classified:
+
+- 1,061 cat images.
+- 1,158 dog images.
+
+It incorrectly classified:
+
+- 189 cat images as dogs.
+- 92 dog images as cats.
+
+### 8.5. Classification Report
+
+The classification report provided the following metrics:
+
+```text
+              precision    recall  f1-score   support
+
+        cats       0.92      0.85      0.88      1250
+        dogs       0.86      0.93      0.89      1250
+
+    accuracy                           0.89      2500
+   macro avg       0.89      0.89      0.89      2500
+weighted avg       0.89      0.89      0.89      2500
+```
+
+The main results can be summarized as follows:
+
+- **Cats:** 92% precision, 85% recall, and 88% F1-score.
+- **Dogs:** 86% precision, 93% recall, and 89% F1-score.
+
+The model achieved higher recall for dogs, meaning it correctly identified a greater proportion of actual dog images. For cats, it achieved higher precision, meaning that predictions classified as cats were more likely to be correct.
+
+### 8.6. Result
+
+The final evaluation confirmed that the model achieved an accuracy of 88.76% on the independent test dataset.
+
+The results demonstrate that the EfficientNetB0-based classifier can distinguish between cats and dogs with good overall performance.
+
+The difference between the validation accuracy (91.48%) and test accuracy (88.76%) is 2.72 percentage points. This provides an indication of the model's generalization performance on previously unseen images.
 
 ## 9. Individual Predictions
 
@@ -489,13 +579,13 @@ The evaluation script reports loss, accuracy, a confusion matrix, and a classifi
 
 In addition to evaluating the model using the test dataset, a feature was implemented to allow users to provide an individual image and obtain a prediction.
 
-This makes it possible to test the classifier using manually selected images.
+This makes it possible to test the classifier using manually selected images and observe the predicted category and its associated confidence score.
 
 ### 9.2. Implementation
 
 The following file was created:
 
-```text
+```text id="f6y2pk"
 src/predict.py
 ```
 
@@ -515,13 +605,13 @@ The script performs the following operations:
 
 From the project root directory, the script can be executed using:
 
-```bash
+```bash id="1nqj2f"
 python src/predict.py
 ```
 
 The program requests the image path:
 
-```text
+```text id="h4m2s1"
 Enter the image path:
 ```
 
@@ -529,20 +619,44 @@ The user enters the corresponding path, and the model returns the prediction.
 
 ### 9.4. Tests Performed
 
-Two images from the original dataset were used for testing:
+Two individual image predictions were performed to verify the functionality.
 
-| Image | Predicted Category | Confidence |
-|---|---|---:|
-| `cat.10.jpg` | Cats | 98.88% |
-| `dog.10.jpg` | Dogs | 99.26% |
+The first test used an image from the original training dataset, while the second used an image from the independent test dataset.
 
-Both images were classified correctly.
+The following results were obtained:
+
+| Image | Dataset | Predicted Category | Confidence |
+| :--- | :--- | :--- | ---: |
+| `cat.10.jpg` | Training | Cats | 99.22% |
+| `cat.1.jpg` | Test | Cats | 99.95% |
+
+**Example 1: Image from the training dataset**
+
+```text
+Enter the image path: data/raw/dogs-vs-cats/train/cat.10.jpg
+
+Predicted class: cats
+Confidence: 99.22%
+```
+
+**Example 2: Image from the test dataset**
+
+```text
+Enter the image path: data/processed_split/test/cats/cat.1.jpg
+
+Predicted class: cats
+Confidence: 99.95%
+```
+
+Both images were classified as cats, with high confidence scores.
 
 ### 9.5. Result
 
-The individual prediction functionality was successfully implemented, allowing the trained model to classify cat and dog images independently.
+The individual prediction functionality was successfully implemented, allowing the trained model to classify images independently of the batch evaluation process.
 
-The displayed percentage represents the probability assigned by the model to the predicted category, not a guarantee that the classification is correct.
+The displayed confidence percentage represents the probability assigned by the model to its predicted category. It does not guarantee that the prediction is correct.
+
+The second test also demonstrated that the model could make an individual prediction using an image from the reserved test dataset, which was not used during training or model selection.
 
 ## 10. Problems Encountered and Solutions
 
@@ -552,7 +666,7 @@ During project development, several challenges arose related to the execution en
 
 **Problem:**
 
-During the initial training tests, a batch size of 32 images was used. The process was terminated by the Codespaces environment, most likely due to memory consumption.
+During the initial training tests, a batch size of 32 images was used. The process was terminated by the Codespaces environment, possibly related to resource limitations in the Codespaces environment. The exact cause was not confirmed.
 
 **Solution:**
 
@@ -598,7 +712,7 @@ Training was performed using CPU. Although this increased processing time, it al
 
 **Problem:**
 
-Organizing the dataset required separating the original images into training and test directories, which could lead to file duplication and unnecessary storage consumption.
+Organizing the dataset required separating the original images into training, validation, and test directories, which could lead to file duplication and unnecessary storage consumption.
 
 **Solution:**
 
@@ -621,29 +735,53 @@ A binary image classifier capable of distinguishing between cats and dogs was su
 The following tasks were completed:
 
 - Downloading and organizing a dataset containing 25,000 images.
-- Splitting the data into training, validation, and test sets.
-- Exploring and visualizing images.
+- Splitting the data into independent training, validation, and test sets.
+- Exploring and visualizing the images.
 - Implementing data generators using `ImageDataGenerator`.
 - Building and compiling an EfficientNetB0-based neural network.
-- Training the model using callbacks.
+- Training the model using `ModelCheckpoint` and `EarlyStopping`.
 - Evaluating the model using classification metrics and a confusion matrix.
 - Implementing a script for individual image predictions.
 - Documenting the development process and technical solutions.
 
 ### 11.2. Results Summary
 
+The final model was evaluated using an independent test set containing 2,500 images.
+
 | Indicator | Result |
-|---|---:|
+| :--- | ---: |
 | Original images | 25,000 |
 | Training images | 20,000 |
 | Validation images | 2,500 |
 | Test images | 2,500 |
 | Architecture | EfficientNetB0 |
-| New validation accuracy | Pending retraining |
-| Independent test accuracy | Pending retraining |
+| Total parameters | 4,213,797 |
+| Best validation accuracy | 91.48% |
+| Independent test accuracy | 88.76% |
+| Test loss | 0.2581 |
+| Correct predictions | 2,219 |
+| Incorrect predictions | 281 |
 | Saved model | `best_model.keras` |
 
-### 11.3. Limitations and Possible Improvements
+The model correctly classified 2,219 out of 2,500 test images, achieving an accuracy of 88.76%.
+
+The confusion matrix and classification report provide additional information about the model's performance on each category. The model achieved a recall of 85% for cats and 93% for dogs.
+
+The best validation accuracy was 91.48%, achieved during epoch 8. The saved checkpoint was selected using `val_accuracy`, while `EarlyStopping` monitored `val_loss`.
+
+### 11.3. Main Project Files
+
+The project is organized into separate scripts, each responsible for a specific stage of the classification pipeline:
+
+- `src/prepare_dataset.py`: prepares the dataset and creates the training, validation, and test splits.
+- `src/data_loader.py`: loads the images and creates the data generators.
+- `src/model.py`: defines and compiles the EfficientNetB0-based model.
+- `src/train.py`: trains the model and applies the callbacks.
+- `src/evaluate.py`: evaluates the saved model using the independent test set.
+- `src/predict.py`: performs individual image predictions.
+- `models/best_model.keras`: stores the best model checkpoint selected during training.
+
+### 11.4. Limitations and Possible Improvements
 
 Although the project was completed successfully, there are several opportunities for improvement:
 
@@ -651,13 +789,17 @@ Although the project was completed successfully, there are several opportunities
 2. **Data augmentation:** incorporate data augmentation techniques to improve the model's generalization ability.
 3. **Training optimization:** experiment with different batch sizes, optimizers, and learning rates.
 4. **Results visualization:** incorporate training and validation accuracy/loss plots, as well as a visualization of the confusion matrix.
+5. **Model performance:** investigate the classification errors, particularly the cat images incorrectly classified as dogs, to identify potential improvements.
 
-### 11.4. Conclusion
+### 11.5. Conclusion
 
 This project made it possible to implement a complete image classification workflow using deep learning techniques.
 
-The repository now separates training, validation, and test data. The previously reported 91.32% came from a reused test split and is not an independent result; a new training run is required to report valid test metrics. An additional feature was also implemented to perform predictions on individual images.
+The dataset was divided into independent training, validation, and test sets, ensuring that the final evaluation was performed on data that had not been used for training or checkpoint selection.
 
-The development process provided practical experience with Python, TensorFlow, Keras, image processing, model evaluation, and project management using Git and GitHub.
+The EfficientNetB0-based classifier achieved an accuracy of 88.76% on the independent test set. The results demonstrate that the model can distinguish between cats and dogs with satisfactory performance, although some classification errors remain.
 
+Individual prediction tests also confirmed that the prediction script works with specific image files.
+
+The development process provided practical experience with Python, TensorFlow, Keras, image processing, model training and evaluation, and project management using Git and GitHub.
 ---
