@@ -109,6 +109,54 @@ The best model according to validation accuracy is saved as:
 
 Training completed all 10 epochs. The highest validation accuracy was achieved at epoch 8.
 
+## Trained Model and Reproduction
+
+The trained model is included in the repository at `models/best_model.keras` (approximately 49 MB).
+
+The scripts `src/predict.py` and `src/evaluate.py` load this file to perform predictions and evaluate the model. Therefore, the trained model must be available before running either script.
+
+### Regenerating the Model
+
+If the trained model is missing or needs to be regenerated, follow these steps:
+
+1. Install the project dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Make sure the original dataset is available in the expected directory structure under `data/raw/`.
+
+3. Generate the training, validation, and test splits:
+
+   ```bash
+   python src/prepare_dataset.py
+   ```
+
+4. Train the model:
+
+   ```bash
+   python src/train.py
+   ```
+
+After training, the model will be saved automatically as `models/best_model.keras`.
+
+### Running Evaluation and Predictions
+
+Once the trained model is available, run the evaluation script:
+
+```bash
+python src/evaluate.py
+```
+
+To classify an individual image, run:
+
+```bash
+python src/predict.py
+```
+
+Make sure the image path configured in `src/predict.py` points to an existing image.
+
 ## Model Evaluation
 
 The final evaluation is performed using the independent test subset, which is not used during training, early stopping, or model checkpoint selection.
@@ -307,7 +355,6 @@ data/raw/dogs-vs-cats/train/cat.10.jpg
 
 ## Notes
 
-- The dataset and trained model are excluded from Git tracking through `.gitignore`.
 - Download and prepare the dataset before running the training, evaluation, or prediction scripts.
 - The project uses 224 × 224 pixel images to match the specified EfficientNetB0 input shape.
 - Training performance depends on available hardware. CPU-based training may take considerably longer than GPU-based training.

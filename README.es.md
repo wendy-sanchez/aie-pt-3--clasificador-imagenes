@@ -285,6 +285,54 @@ El mejor modelo según la accuracy de validación se guardará en:
 models/best_model.keras
 ```
 
+## Modelo entrenado y reproducción
+
+El modelo entrenado está incluido en el repositorio en la ruta `models/best_model.keras` (aproximadamente 49 MB).
+
+Los scripts `src/predict.py` y `src/evaluate.py` cargan este archivo para realizar predicciones y evaluar el modelo. Por lo tanto, el modelo entrenado debe estar disponible antes de ejecutar cualquiera de los dos scripts.
+
+### Cómo regenerar el modelo
+
+Si el modelo entrenado no está disponible o necesitas generarlo nuevamente, sigue estos pasos:
+
+1. Instala las dependencias del proyecto:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Asegúrate de que el dataset original esté disponible y organizado en la estructura de directorios esperada dentro de `data/raw/`.
+
+3. Genera las particiones de entrenamiento, validación y prueba:
+
+   ```bash
+   python src/prepare_dataset.py
+   ```
+
+4. Entrena el modelo:
+
+   ```bash
+   python src/train.py
+   ```
+
+Al finalizar el entrenamiento, el modelo se guardará automáticamente en `models/best_model.keras`.
+
+### Ejecutar la evaluación y las predicciones
+
+Una vez que el modelo entrenado esté disponible, ejecuta el script de evaluación:
+
+```bash
+python src/evaluate.py
+```
+
+Para clasificar una imagen individual, ejecuta:
+
+```bash
+python src/predict.py
+```
+
+Asegúrate de que la ruta de la imagen configurada en `src/predict.py` corresponda a una imagen existente.
+
 ### 7. Evaluar el modelo
 
 ```bash
@@ -307,7 +355,6 @@ data/raw/dogs-vs-cats/train/cat.10.jpg
 
 ## Consideraciones
 
-- El dataset y el modelo entrenado están excluidos del seguimiento de Git mediante `.gitignore`.
 - Es necesario descargar y preparar el dataset antes de ejecutar los scripts de entrenamiento, evaluación o predicción.
 - El proyecto utiliza imágenes de 224 × 224 píxeles para mantener la compatibilidad con las dimensiones de entrada especificadas para EfficientNetB0.
 - El tiempo de entrenamiento depende del hardware disponible. El entrenamiento mediante CPU puede tardar considerablemente más que utilizando GPU.
