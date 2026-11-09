@@ -16,4 +16,3 @@ data/interim/
 *.zip
 
 # Trained models
-models/
